@@ -29,7 +29,7 @@ public class Recv {
 
                     Long count = (Long) first.get("count");
                     System.out.println("Delivery count: " + count);
-                    if (count >= 10) {
+                    if (count >= 6) {
                         channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
                         return;
                     }
