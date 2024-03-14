@@ -1,4 +1,4 @@
-# DEMO: RabbitMQ delayed retry loop with limit of 10 sample
+# DEMO: RabbitMQ delayed retry loop with limit of 6 sample
 
 Creates a loop where a NACKed message is retried 6 times with a delay 5 seconds beteen retries
 
