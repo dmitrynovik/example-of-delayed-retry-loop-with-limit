@@ -8,7 +8,6 @@ import java.util.HashMap;
 public class Send {
 
     private final static String QUEUE_NAME = "delayed-retry";
-    //private final static String DLX_NAME = "delayed-retry-dlx";
 
     public static void main(String[] argv) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
