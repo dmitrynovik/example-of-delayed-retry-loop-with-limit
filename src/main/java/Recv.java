@@ -17,7 +17,7 @@ public class Recv {
 
         channel.basicConsume(QUEUE_NAME, 
             false, 
-            DelayedRetry.createRetryDeliverCallback(channel, 6), 
+            DelayedRetry.createRetryDeliveryCallback(channel, 6), 
             consumerTag -> { });
     }
 }
