@@ -1,4 +1,4 @@
-# DEMO: RabbitMQ delayed retry loop with limit of 6 sample
+# DEMO: RabbitMQ delayed retry loop with limit of N retries
 
 See the `src/main/java/DelayedRetry.java`.
 Creates a delayed retry strategy for a consumer with customizable:
