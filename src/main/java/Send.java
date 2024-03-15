@@ -3,11 +3,10 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 
 public class Send {
 
-    private final static String QUEUE_NAME = "delayed-retry";
+    final static String QUEUE_NAME = "delayed-retry";
 
     public static void main(String[] argv) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
@@ -16,19 +15,7 @@ public class Send {
         try (Connection connection = factory.newConnection();
              Channel channel = connection.createChannel()) {
 
-            channel.queueDeclare(QUEUE_NAME, true, false, false, new HashMap<String,Object>() {{ 
-                put("x-queue-type", "quorum");
-                put("x-dead-letter-exchange", "");
-                put("x-dead-letter-routing-key", QUEUE_NAME + "-dlx");
-            }});
-
-            
-            channel.queueDeclare(QUEUE_NAME + "-dlx", true, false, false, new HashMap<String,Object>() {{ 
-                put("x-queue-type", "quorum");
-                put("x-dead-letter-exchange", "");
-                put("x-dead-letter-routing-key", QUEUE_NAME);
-                put("x-message-ttl", 5000);
-            }});
+            DelayedRetry.declareTopology(channel);
 
             String message = "Hello World!";
             channel.basicPublish("", QUEUE_NAME, null, message.getBytes(StandardCharsets.UTF_8));
