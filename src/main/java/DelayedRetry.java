@@ -31,7 +31,7 @@ public class DelayedRetry {
         }});
         
         channel.queueDeclare(queueName + "-dlx", true, false, false, new HashMap<String,Object>() {{ 
-            put("x-queue-type", "quorum");
+            put("x-queue-type", qType);
             put("x-dead-letter-exchange", "");
             put("x-dead-letter-routing-key", queueName);
             put("x-message-ttl", delay);
