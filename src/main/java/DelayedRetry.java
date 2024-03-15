@@ -1,12 +1,16 @@
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DeliverCallback;
+import com.rabbitmq.client.AMQP.BasicProperties;
 
 public class DelayedRetry {
+    private static Logger logger = LoggerFactory.getLogger(DelayedRetry.class);
 
     public static void declareTopology(Channel channel, String queueName, int delay) throws IOException {
         declareTopology(channel, queueName, delay, QueueType.Quorum);
@@ -24,13 +28,15 @@ public class DelayedRetry {
         final String qType = getQueueType(queueType);
 
         // NOTE: this may throw a PRECONDITION_FAILED if queues with same names but different arguments (e.g. type or TTL) exist:
+        String dlxQueue = queueName + "-dlx";
+
         channel.queueDeclare(queueName, true, false, false, new HashMap<String,Object>() {{ 
             put("x-queue-type", qType);
             put("x-dead-letter-exchange", "");
-            put("x-dead-letter-routing-key", queueName + "-dlx");
+            put("x-dead-letter-routing-key", dlxQueue);
         }});
         
-        channel.queueDeclare(queueName + "-dlx", true, false, false, new HashMap<String,Object>() {{ 
+        channel.queueDeclare(dlxQueue, true, false, false, new HashMap<String,Object>() {{ 
             put("x-queue-type", qType);
             put("x-dead-letter-exchange", "");
             put("x-dead-letter-routing-key", queueName);
@@ -43,21 +49,28 @@ public class DelayedRetry {
      * @param retries The number of message retries
      * @return
      */
-    public static DeliverCallback createRetryDeliveryCallback(Channel channel, int retries) {
+    public static DeliverCallback createRetryDeliveryCallback(Channel channel, int retries, Consumer consumer) {
         DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-            String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
-            System.out.println(" [x] Received '" + message + "'");
-            if (delivery.getProperties().getHeaders() != null) {
+            if (consumer.consume(delivery)) {
+                channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+                return;
+            }
+
+            BasicProperties props = delivery.getProperties();
+            if (props.getHeaders() != null) {
+
                 @SuppressWarnings("unchecked")
-                ArrayList<Object> death =  (ArrayList<Object>) delivery.getProperties().getHeaders().get("x-death");
+                ArrayList<Object> death =  (ArrayList<Object>) props.getHeaders().get("x-death");
                 if (death != null) {
+
                     @SuppressWarnings("unchecked")
                     HashMap<String,Object> first = (HashMap<String,Object>) death.get(0);
     
                     Long count = (Long) first.get("count");
-                    System.out.println("Retry number: " + count);
+                    logger.debug("Retry number: " + count);
                     if (count >= retries) {
                         // We exceeded number of retries, give up on the message processing:
+                        logger.warn("Message (id: " + props.getMessageId() + ") exceeded number of retries: " + retries);
                         channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
                         return;
                     }
